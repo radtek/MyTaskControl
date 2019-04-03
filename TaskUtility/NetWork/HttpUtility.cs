@@ -35,7 +35,7 @@ namespace TaskUtility.NetWork
         /// <param name="netType">POST/GET</param>
         /// <param name="contentType">请求体类型</param>
         /// <returns></returns>
-        public static string HttpReq(string rootURL,ParamsType paramsType,IDictionary queryParams, string bodyParamStr, Encoding encoding, NetType netType, ContentType contentType)
+        public static string HttpReq(string rootURL,ParamsType paramsType, string bodyParamStr, Encoding encoding, NetType netType, ContentType contentType,IDictionary queryParams = null)
         {
             string result = string.Empty;
             HttpWebRequest req = null;
@@ -57,7 +57,7 @@ namespace TaskUtility.NetWork
             req.Method = GetNetType(netType);
             req.ContentType = GetContentType(contentType);
             #region 添加Post 参数
-            byte[] data = Encoding.UTF8.GetBytes(bodyParamStr);
+            byte[] data = encoding.GetBytes(bodyParamStr);
             req.ContentLength = data.Length;
             using (Stream reqStream = req.GetRequestStream())
             {
