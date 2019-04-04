@@ -61,9 +61,8 @@
     <Compile Include="NetWork\HttpUtility.cs" />
     <Compile Include="NetWork\WebService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SigntureUtility\EncryHelp.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="SigntureUtility\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
