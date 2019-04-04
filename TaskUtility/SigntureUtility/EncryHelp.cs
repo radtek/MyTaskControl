@@ -12,6 +12,7 @@ namespace TaskUtility.SigntureUtility
     /// </summary>
     public static class EncryHelp
     {
+        #region 进制转换
         /// <summary>
         /// 将二进制转成字符串
         /// </summary>
@@ -93,79 +94,14 @@ namespace TaskUtility.SigntureUtility
             //按照指定编码将字节数组变为字符串
             return encode.GetString(b);
         }
-        //默认密钥向量--AES 
-        private static byte[] _key1 = { 0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF };
+        #endregion
 
-        private static readonly byte[] IvBytes = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF };
+        #region CA证书
 
-        /// <summary>
-        /// AES加密算法
-        /// </summary>
-        /// <param name="plainText">明文字符串</param>
-        /// <param name="strKey">密钥</param>
-        /// <returns>返回加密后的密文字节数组</returns>
-        public static string AESEncrypt(string plainText, string strKey)
-        {
-            //分组加密算法
-            SymmetricAlgorithm des = Rijndael.Create();
-            byte[] inputByteArray = Encoding.UTF8.GetBytes(plainText);//得到需要加密的字节数组
-            des.Mode = CipherMode.ECB;
-            des.Padding = PaddingMode.PKCS7;
-            //设置密钥及密钥向量
-            des.Key = Encoding.UTF8.GetBytes(strKey);
-            des.IV = _key1;
-            MemoryStream ms = new MemoryStream();
-            CryptoStream cs = new CryptoStream(ms, des.CreateEncryptor(), CryptoStreamMode.Write);
-            cs.Write(inputByteArray, 0, inputByteArray.Length);
-            cs.FlushFinalBlock();
-            byte[] cipherBytes = ms.ToArray();//得到加密后的字节数组
-            cs.Close();
-            ms.Close();
-            return BitConverter.ToString(cipherBytes).Replace("-", "").ToLower();
-        }
-        /// <summary>
-        /// AES解密（平安）
-        /// </summary>
-        /// <param name="cipherText">密文字节数组</param>
-        /// <param name="strKey">密钥</param>
-        /// <returns>返回解密后的字符串</returns>
-        public static byte[] AESDecrypt(byte[] cipherText, string strKey)
-        {
-            SymmetricAlgorithm des = Rijndael.Create();
-            des.Key = Encoding.UTF8.GetBytes(strKey);
-            des.Mode = CipherMode.ECB;
-            des.Padding = PaddingMode.PKCS7;
-            des.IV = _key1;
-            byte[] decryptBytes = new byte[cipherText.Length];
-            MemoryStream ms = new MemoryStream(cipherText);
-            CryptoStream cs = new CryptoStream(ms, des.CreateDecryptor(), CryptoStreamMode.Read);
-            cs.Read(decryptBytes, 0, decryptBytes.Length);
-            cs.Close();
-            ms.Close();
-            return decryptBytes;
-        }
-        /// <summary>
-        /// AES解密
-        /// </summary>
-        /// <param name="cipherText">密文字节数组</param>
-        /// <param name="strKey">密钥</param>
-        /// <returns>返回解密后的字符串</returns>
-        public static string AESDecrypt(string txt, string strKey)
-        {
-            byte[] cipherText = Encoding.UTF8.GetBytes(txt);
-            SymmetricAlgorithm des = Rijndael.Create();
-            des.Key = Encoding.UTF8.GetBytes(strKey);
-            des.Mode = CipherMode.ECB;
-            des.Padding = PaddingMode.PKCS7;
-            des.IV = _key1;
-            byte[] decryptBytes = new byte[cipherText.Length];
-            MemoryStream ms = new MemoryStream(cipherText);
-            CryptoStream cs = new CryptoStream(ms, des.CreateDecryptor(), CryptoStreamMode.Read );
-            cs.Read(decryptBytes, 0, decryptBytes.Length);
-            cs.Close();
-            ms.Close();
-            return Convert.ToBase64String(decryptBytes);
-        }
+        #endregion
+
+        #region RSA私钥加签/公钥延签
+
         /// <summary>  
         /// RSA对MD5加密后的长度为32的密文进行签名  
         /// </summary>  
@@ -184,6 +120,8 @@ namespace TaskUtility.SigntureUtility
             return BitConverter.ToString(signature).Replace("-", "").ToLower();
             //return Convert.ToBase64String(signature);
         }
+        #endregion
+
         #region 通用加密算法
 
         /// <summary>
@@ -528,8 +466,63 @@ namespace TaskUtility.SigntureUtility
             }
         }
 
+
         #endregion Des 加解密
 
+        #region AES加/解密
+        //默认密钥向量--AES 
+        private static byte[] _key1 = { 0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF };
+
+        private static readonly byte[] IvBytes = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF };
+
+        /// <summary>
+        /// AES加密算法
+        /// </summary>
+        /// <param name="plainText">明文字符串</param>
+        /// <param name="strKey">密钥</param>
+        /// <returns>返回加密后的密文字节数组</returns>
+        public static string AESEncrypt(string plainText, string strKey)
+        {
+            //分组加密算法
+            SymmetricAlgorithm des = Rijndael.Create();
+            byte[] inputByteArray = Encoding.UTF8.GetBytes(plainText);//得到需要加密的字节数组
+            des.Mode = CipherMode.ECB;
+            des.Padding = PaddingMode.PKCS7;
+            //设置密钥及密钥向量
+            des.Key = Encoding.UTF8.GetBytes(strKey);
+            des.IV = _key1;
+            MemoryStream ms = new MemoryStream();
+            CryptoStream cs = new CryptoStream(ms, des.CreateEncryptor(), CryptoStreamMode.Write);
+            cs.Write(inputByteArray, 0, inputByteArray.Length);
+            cs.FlushFinalBlock();
+            byte[] cipherBytes = ms.ToArray();//得到加密后的字节数组
+            cs.Close();
+            ms.Close();
+            return BitConverter.ToString(cipherBytes).Replace("-", "").ToLower();
+        }
+        /// <summary>
+        /// AES解密
+        /// </summary>
+        /// <param name="cipherText">密文字节数组</param>
+        /// <param name="strKey">密钥</param>
+        /// <returns>返回解密后的字符串</returns>
+        public static string AESDecrypt(string txt, string strKey)
+        {
+            byte[] cipherText = Encoding.UTF8.GetBytes(txt);
+            SymmetricAlgorithm des = Rijndael.Create();
+            des.Key = Encoding.UTF8.GetBytes(strKey);
+            des.Mode = CipherMode.ECB;
+            des.Padding = PaddingMode.PKCS7;
+            des.IV = _key1;
+            byte[] decryptBytes = new byte[cipherText.Length];
+            MemoryStream ms = new MemoryStream(cipherText);
+            CryptoStream cs = new CryptoStream(ms, des.CreateDecryptor(), CryptoStreamMode.Read);
+            cs.Read(decryptBytes, 0, decryptBytes.Length);
+            cs.Close();
+            ms.Close();
+            return Convert.ToBase64String(decryptBytes);
+        }
+        #endregion
         #endregion 对称加密算法
 
         #region 非对称加密算法
