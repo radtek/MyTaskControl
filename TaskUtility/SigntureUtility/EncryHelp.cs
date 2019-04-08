@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace TaskUtility.SigntureUtility
@@ -97,29 +98,135 @@ namespace TaskUtility.SigntureUtility
         #endregion
 
         #region CA证书
+        /// <summary>
+        /// 私钥加签
+        /// </summary>
+        /// <param name="CertFilePath">证书完整路径</param>
+        /// <param name="CertPass">证书密码</param>
+        /// <param name="Text">待签名文本</param>
+        /// <param name="encoding">编码规范</param>
+        /// <returns></returns>
+        public static string CACertSign(string priCertFilePath, string CertPass, string Text, Encoding encoding)
+        {
+            //调用证书（私钥，需要密码）          
+            X509Certificate2 privateCert = new X509Certificate2(priCertFilePath, CertPass, X509KeyStorageFlags.Exportable);
+
+            RSACryptoServiceProvider privateKey = (RSACryptoServiceProvider)privateCert.PrivateKey;
+            // 获取私钥 
+            RSACryptoServiceProvider privateKey1 = new RSACryptoServiceProvider();
+            privateKey1.ImportParameters(privateKey.ExportParameters(true));
+            byte[] data = encoding.GetBytes(Text);
+            byte[] signature = privateKey1.SignData(data, new SHA1CryptoServiceProvider());
+            //对签名密文进行Base64编码 
+            return Convert.ToBase64String(signature);
+        }
+
+        /// <summary>
+        /// 公钥验签
+        /// </summary>
+        /// <param name="pubCertFilePath"></param>
+        /// <param name="encoding"></param>
+        /// <param name="RspSign"></param>
+        /// <param name="RspText"></param>
+        /// <returns></returns>
+        public static bool CAVerifySign(string pubCertFilePath, Encoding encoding, string verifySign, string RspText)
+        {
+            //调用证书(公钥)            
+            X509Certificate2 Cert = new X509Certificate2(pubCertFilePath);
+            RSACryptoServiceProvider PublicKey = (RSACryptoServiceProvider)Cert.PublicKey.Key;
+            RSACryptoServiceProvider publickey1 = new RSACryptoServiceProvider();
+            publickey1.ImportParameters(PublicKey.ExportParameters(false));
+            byte[] rspbyte = encoding.GetBytes(RspText);
+            byte[] sign = Convert.FromBase64String(verifySign);
+            return publickey1.VerifyData(rspbyte, new SHA1CryptoServiceProvider(), sign);
+
+        }
+        #endregion
+
+        #region RSA算法
+
+        #region RSA私钥加签/公钥延签
+        /// <summary>
+        /// Rsa私钥签名
+        /// </summary>
+        /// <param name="strPrivateKey"></param>
+        /// <param name="data"></param>
+        /// <param name="encode"></param>
+        /// <param name="HashMethodType">指定RSA的Hash算法</param>
+        /// <returns></returns>
+        public static string RSASignWithPriKey(string strPrivateKey, string data, Encoding encode, string HashMethodType = "MD5")
+        {
+            RSACryptoServiceProvider rsp = new RSACryptoServiceProvider();
+            rsp.FromXmlString(strPrivateKey);
+            var dataBytes = encode.GetBytes(data);
+            var HashbyteSignature = rsp.SignData(dataBytes, HashMethodType);
+            return Convert.ToBase64String(HashbyteSignature);
+        }
+        /// <summary>
+        /// Rsa公钥验签
+        /// </summary>
+        /// <param name="strPubKey"></param>
+        /// <param name="data"></param>
+        /// <param name="sign"></param>
+        /// <param name="encode"></param>
+        /// <param name="HashMethodType">指定RSA的Hash算法</param>
+        /// <returns></returns>
+        public static bool RSASignVerifyPubKey(string strPubKey, string data, string sign, Encoding encode, string HashMethodType = "MD5")
+        {
+            RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+            //导入公钥，准备验证签名
+            rsa.FromXmlString(strPubKey);
+            //返回数据验证结果
+            byte[] Data = encode.GetBytes(data);
+            byte[] rgbSignature = Convert.FromBase64String(sign);
+            return rsa.VerifyData(Data, HashMethodType, rgbSignature);
+        }
 
         #endregion
 
-        #region RSA私钥加签/公钥延签
-
-        /// <summary>  
-        /// RSA对MD5加密后的长度为32的密文进行签名  
-        /// </summary>  
-        /// <param name="strPrivateKey">私钥</param>  
-        /// <param name="strContent">MD5加密后的密文</param>  
-        /// <returns></returns>  
-        public static string RSASignatureFormatter(string strPrivateKey, string strContent)
+        #region RSA加解密
+        /// <summary>
+        /// RSA加密PEM秘钥
+        /// </summary>
+        /// <param name="publicKeyPEM"></param>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public static string RSAEncryptPEM(string publicKeyPEM, string data, string encoding = "UTF-8")
         {
-            byte[] btContent = Encoding.UTF8.GetBytes(strContent);
-            byte[] hv = MD5.Create().ComputeHash(btContent);
-            RSACryptoServiceProvider rsp = new RSACryptoServiceProvider();
-            rsp.FromXmlString(strPrivateKey);
-            RSAPKCS1SignatureFormatter rf = new RSAPKCS1SignatureFormatter(rsp);
-            rf.SetHashAlgorithm("MD5");
-            byte[] signature = rf.CreateSignature(hv);
-            return BitConverter.ToString(signature).Replace("-", "").ToLower();
-            //return Convert.ToBase64String(signature);
+            RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+            byte[] cipherbytes;
+            rsa.FromXmlString(publicKeyPEM);
+            //☆☆☆☆.NET 4.6以后特有☆☆☆☆
+            //HashAlgorithmName hashName = new System.Security.Cryptography.HashAlgorithmName(hashAlgorithm);
+            //RSAEncryptionPadding padding = RSAEncryptionPadding.OaepSHA512;//RSAEncryptionPadding.CreateOaep(hashName);//.NET 4.6以后特有               
+            //cipherbytes = rsa.Encrypt(Encoding.GetEncoding(encoding).GetBytes(data), padding);
+            //☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆
+            //☆☆☆☆.NET 4.6以前请用此段代码☆☆☆☆
+            cipherbytes = rsa.Encrypt(Encoding.GetEncoding(encoding).GetBytes(data), false);
+            return Convert.ToBase64String(cipherbytes);
         }
+        /// <summary>
+        /// RSA解密PEM秘钥
+        /// </summary>
+        /// <param name="privateKeyPEM"></param>
+        /// <param name="content"></param>
+        /// <returns></returns>
+        public static string RSADecryptPEM(string privateKeyPEM, string data, string encoding = "UTF-8")
+        {
+            RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+            byte[] cipherbytes;
+            rsa.FromXmlString(privateKeyPEM);
+            //☆☆☆☆.NET 4.6以后特有☆☆☆☆
+            //RSAEncryptionPadding padding = RSAEncryptionPadding.CreateOaep(new System.Security.Cryptography.HashAlgorithmName(hashAlgorithm));//.NET 4.6以后特有        
+            //cipherbytes = rsa.Decrypt(Encoding.GetEncoding(encoding).GetBytes(data), padding);
+            //☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆
+            //☆☆☆☆.NET 4.6以前请用此段代码☆☆☆☆
+            cipherbytes = rsa.Decrypt(Convert.FromBase64String(data), false);
+            return Encoding.GetEncoding(encoding).GetString(cipherbytes);
+        }
+
+        #endregion
+
         #endregion
 
         #region 通用加密算法
