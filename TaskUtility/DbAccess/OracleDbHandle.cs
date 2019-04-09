@@ -105,13 +105,20 @@ namespace TaskUtility.DbAccess
         #endregion
 
         #region Query
-        public DataSet Query(string ConnectionString,string SQLString, params OracleParameter[] cmdParms)
+        /// <summary>
+        /// 查询DataSet
+        /// </summary>
+        /// <param name="ConnectionString">连接串</param>
+        /// <param name="SQLString"></param>
+        /// <param name="cmdParms"></param>
+        /// <returns></returns>
+        public DataSet Query(string ConnectionString, OraParameter param)
         {
             using (OracleConnection connection = new OracleConnection(ConnectionString))
             {
                 OracleCommand cmd = new OracleCommand();
                 cmd.BindByName = true;
-                PrepareCommand(cmd, connection, null, SQLString, cmdParms);
+                PrepareCommand(cmd, connection, null, param.SqlCmdTxt, param.Value.ToArray());
                 using (OracleDataAdapter da = new OracleDataAdapter(cmd))
                 {
                     DataSet ds = new DataSet();
