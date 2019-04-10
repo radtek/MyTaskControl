@@ -24,9 +24,6 @@ namespace TaskUtility.NetWork
     public static class HttpUtility
     {
 
-
-
-
         #region Http请求
         /// <summary>
         /// Http请求
