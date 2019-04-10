@@ -42,6 +42,9 @@
     <Reference Include="Oracle.ManagedDataAccess">
       <HintPath>..\..\..\引用dll汇总\Oracle.ManagedDataAccess.dll</HintPath>
     </Reference>
+    <Reference Include="RestSharp, Version=106.6.9.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
+      <HintPath>..\packages\RestSharp.106.6.9\lib\net452\RestSharp.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
@@ -79,6 +82,8 @@
     <Compile Include="MyTask.cs" />
     <Compile Include="NetWork\Ftp.cs" />
     <Compile Include="NetWork\HttpUtility.cs" />
+    <Compile Include="NetWork\Person.cs" />
+    <Compile Include="NetWork\RestFulUtility.cs" />
     <Compile Include="NetWork\WebService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SigntureUtility\EncryHelp.cs" />

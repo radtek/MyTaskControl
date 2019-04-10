@@ -37,9 +37,10 @@ namespace TaskUtility.NetWork
         /// <param name="bodyParamStr">Body参数 可为Json/Text</param>
         /// <param name="encoding">URL解码编码</param>
         /// <param name="netType">POST/GET</param>
+        /// <param name="charset">Http编码规范</param>
         /// <param name="contentType">请求体类型</param>
         /// <returns></returns>
-        public static string HttpReq(string rootURL,ParamsType paramsType, string bodyParamStr, Encoding encoding, NetType netType, ContentType contentType,IDictionary queryParams = null)
+        public static string HttpReq(string rootURL,ParamsType paramsType, string bodyParamStr, Encoding encoding, NetType netType, ContentType contentType,string charset = "utf-8",IDictionary queryParams = null)
         {
             string result = string.Empty;
             HttpWebRequest req = null;
@@ -59,7 +60,7 @@ namespace TaskUtility.NetWork
                     break;
             }
             req.Method = GetNetType(netType);
-            req.ContentType = GetContentType(contentType);
+            req.ContentType = $"{GetContentType(contentType)}{charset}";
             #region 添加Post 参数
             byte[] data = encoding.GetBytes(bodyParamStr);
             req.ContentLength = data.Length;
@@ -99,7 +100,9 @@ namespace TaskUtility.NetWork
         {
             Application_WWW = 1,
             Application_Json = 2,
-            textplain = 3
+            textplain = 3,
+            textxml = 4,
+            textjson = 5
         }
         /// <summary>
         /// 请求参数类型
@@ -126,6 +129,10 @@ namespace TaskUtility.NetWork
                     return "POST";
                 case NetType.GET:
                     return "GET";
+                case NetType.DELETE:
+                    return "DELETE";
+                case NetType.PUT:
+                    return "PUT";
                 default:
                     return null;
             }
@@ -145,6 +152,10 @@ namespace TaskUtility.NetWork
                     return "application/json;";
                 case ContentType.textplain:
                     return "text/plain";
+                case ContentType.textjson:
+                    return "text/json;";
+                case ContentType.textxml:
+                    return "text/xml;";
                 default:
                     return null;
             }
