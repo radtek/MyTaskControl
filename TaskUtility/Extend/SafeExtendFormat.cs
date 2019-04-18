@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace TaskUtility.Extend
 {
@@ -30,6 +31,22 @@ namespace TaskUtility.Extend
         /// 10位时间戳（秒）
         /// </summary>
         public static string LocalTimeStampInt => Convert.ToInt64(ts.TotalSeconds).ToString();
+        /// <summary>
+        /// 字符串ASCII码升序排序
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public static string AsciiSort(this string input)
+        {
+            string[] unSignArray = new string[input.Length];
+            for (int i = 0; i < input.Length; i++)
+            {
+                unSignArray[i] = input.Substring(i, 1);
+            }
+            //ASCII码升序排序
+            Array.Sort(unSignArray, string.CompareOrdinal);
+            return string.Join("", unSignArray);
+        }
         /// <summary>
         /// 转换成decimal
         /// ----
@@ -309,6 +326,8 @@ namespace TaskUtility.Extend
                     return date.ToString("yyyy/MM/dd HH:mm:ss");
                 case DateTimap.Horizontal:
                     return $"{date:G}";
+                case DateTimap.Common:
+                    return date.ToString("yyyyMMddHHmmss");
                 default:
                     return $"{date:G}";
             }
@@ -326,7 +345,11 @@ namespace TaskUtility.Extend
             /// <summary>
             /// 横线
             /// </summary>
-            Horizontal = 1
+            Horizontal = 1,
+            /// <summary>
+            /// 数字串
+            /// </summary>
+            Common = 2
 
         }
         /// <summary>

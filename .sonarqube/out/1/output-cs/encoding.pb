@@ -1,0 +1,9 @@
+n
+eF:\API开发（Romens雨人）\LearnWay\HongFireSimple\HangFireWebSimple\Config\ApplicationPreload.csutf-8p
+gF:\API开发（Romens雨人）\LearnWay\HongFireSimple\HangFireWebSimple\Config\HangfireBootstrapper.csutf-8^
+UF:\API开发（Romens雨人）\LearnWay\HongFireSimple\HangFireWebSimple\Demo.aspx.csutf-8`
+WF:\API开发（Romens雨人）\LearnWay\HongFireSimple\HangFireWebSimple\Global.asax.csutf-8j
+aF:\API开发（Romens雨人）\LearnWay\HongFireSimple\HangFireWebSimple\Helper\AssemblyHelper.csutf-8l
+cF:\API开发（Romens雨人）\LearnWay\HongFireSimple\HangFireWebSimple\Properties\AssemblyInfo.csutf-8\
+SF:\API开发（Romens雨人）\LearnWay\HongFireSimple\HangFireWebSimple\Startup.csutf-8f
+]F:\API开发（Romens雨人）\LearnWay\HongFireSimple\HangFireWebSimple\TaskGroup\TaskLog.csutf-8

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using NLog;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using System.Threading;
 
 namespace HongFireSimple
 {
@@ -31,8 +32,32 @@ namespace HongFireSimple
         const string ExchangeName = "LiFengFeng.exchange";
         //队列名称
         const string QueueName = "LiFengFeng.queue";
+
+        /// <summary>
+        /// 路由名称
+        /// </summary>
+        const string TopExchangeName = "topic.justin.exchange";
+
+        ///队列名称
+        const string TopQueueName = "topic.justin.queue";
         static void Main(string[] args)
         {
+            //
+            Console.WriteLine("线程等待超时处理-实践");
+            using (ManualResetEvent mua = new ManualResetEvent(false))
+            {
+                using (CancellationTokenSource cts = new CancellationTokenSource())
+                {
+                    var wrok = ThreadPool.RegisterWaitForSingleObject(mua, (state, isTimeOut) => { OperationWaitHandle(isTimeOut,cts); }, null, 5*1000,true);//注册一个等待委托
+                    ThreadPool.QueueUserWorkItem(a =>  MyOperation(2,mua,cts));//加入线程池队列
+                    Thread.Sleep(5 * 1000);
+                    wrok.Unregister(mua);//取消已注册等待操作
+                }
+            }
+
+            Console.ReadKey();
+
+
             #region HangFire调用示例
             //GlobalConfiguration.Configuration
             //   .UseNLogLogProvider()
@@ -53,7 +78,7 @@ namespace HongFireSimple
             //BackgroundJob.ContinueWith(jobId, () => Console.WriteLine("{0}===》这是延续性任务!", DateTime.Now.ToString("HH:mm:ss")));
             #endregion
 
-
+            #region RabbitMQ的direct类型Exchange
             Console.WriteLine("生产者发送RabbitMQ消息...");
             using (IConnection conn = rabbitMqFactory.CreateConnection())
             {
@@ -77,7 +102,9 @@ namespace HongFireSimple
             }
             Console.WriteLine("RabbitMQ消息已发送完成...");
 
+            
             var factory = new ConnectionFactory() { HostName = "192.168.100.205", UserName = "Lixf", Password = "123456", VirtualHost = "/",Port = 5672,AutomaticRecoveryEnabled = true };
+            
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel())
             {
@@ -94,18 +121,106 @@ namespace HongFireSimple
                     var message = Encoding.UTF8.GetString(body);
                     Console.WriteLine("******* 接收到消息 {0}", message);
                     //确认已消费/接收消息
+                    //处理完成，告诉Broker可以服务端可以删除消息，分配新的消息过来
                     channel.BasicAck(ea.DeliveryTag, false);
                 };
+                //noAck设置false,告诉broker，发送消息之后，消息暂时不要删除，等消费者处理完成再说
                 channel.BasicConsume(queue: "LiFengFeng.queue",
                                      autoAck: true,"Tags",
                                      consumer: consumer);
-
+                
                 Console.WriteLine("  [enter] to exit.");
                 Console.ReadLine();
             }
+
+            #endregion
+
+            #region RabbitMQ的Topic类型Topic
+            //------生产者
+            using (IConnection conn = rabbitMqFactory.CreateConnection())
+            {
+                using (IModel channel = conn.CreateModel())
+                {
+                    channel.ExchangeDeclare(TopExchangeName, "topic", durable: false, autoDelete: false, arguments: null);
+                    channel.QueueDeclare(TopQueueName, durable: false, autoDelete: false, exclusive: false, arguments: null);
+                    channel.QueueBind(TopQueueName, TopExchangeName, routingKey: TopQueueName);
+                    //var props = channel.CreateBasicProperties();
+                    //props.Persistent = true;
+                    for (int i = 0; i < 15; i++)
+                    {
+                        string vadata = $"Topic消息，第{i}个";
+                        var msgBody = Encoding.UTF8.GetBytes(vadata);
+                        channel.BasicPublish(exchange: TopExchangeName, routingKey: TopQueueName, basicProperties: null, body: msgBody);
+                        Console.WriteLine($"***发送时间:{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")},内容：{vadata}");
+                    }
+                }
+            }
+            Console.WriteLine("Topic 消息已发送完成！");
+            Console.ReadLine();
+
+            //----消费者
+            using (IConnection conn = rabbitMqFactory.CreateConnection())
+            {
+                using (IModel channel = conn.CreateModel())
+                {
+                    channel.ExchangeDeclare(TopExchangeName, "topic", durable: false, autoDelete: false, arguments: null);
+                    channel.QueueDeclare(TopQueueName, durable: false, autoDelete: false, exclusive: false, arguments: null);
+                    channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
+                    channel.QueueBind(TopQueueName, TopExchangeName, routingKey: TopQueueName);
+                    var consumer = new EventingBasicConsumer(channel);
+                    consumer.Received += (model, ea) =>
+                    {
+                        var msgBody = Encoding.UTF8.GetString(ea.Body);
+                        Console.WriteLine(string.Format("***Topic消息-----接收时间:{0}，消息内容：{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), msgBody));
+                        channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                    };
+                    channel.BasicConsume(TopQueueName, autoAck: false, consumer: consumer);
+                }
+            }
+
+            #endregion
             Console.ReadKey();
 
-
+        }
+        /// <summary>
+        /// 注册委托
+        /// </summary>
+        /// <param name="isTimeOut"></param>
+        /// <param name="token"></param>
+        public static void OperationWaitHandle(bool isTimeOut,CancellationTokenSource token)
+        {
+            if (isTimeOut)
+            {
+                Console.WriteLine("操作已超时！");
+                Console.WriteLine("取消当前操作！");
+                token.Cancel();
+            }
+            else
+            {
+                Console.WriteLine("操作提交完成！");
+            }
+        }
+        /// <summary>
+        /// 工作函数
+        /// </summary>
+        /// <param name="sleepSeconds"></param>
+        /// <param name="mr"></param>
+        /// <param name="cts"></param>
+        public static void MyOperation(int sleepSeconds,ManualResetEvent mr,CancellationTokenSource cts)
+        {
+            cts.Token.Register(() => { Console.WriteLine($"注册委托接收到取消信号，可执行相关业务代码处理!"); });
+            Console.WriteLine($"已接收到命令，预计执行{sleepSeconds}秒...");
+            for (int i = 0; i < sleepSeconds; i++)
+            {
+                if (cts.Token.IsCancellationRequested)
+                {
+                    Console.WriteLine($"接收到取消命令，正在执行操作已取消！");
+                    return;
+                }
+                Thread.Sleep(1000);
+            }
+            mr.Set();
+            Console.WriteLine($"操作执行完成！");
         }
     }
 }

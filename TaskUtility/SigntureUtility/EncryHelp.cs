@@ -15,6 +15,16 @@ namespace TaskUtility.SigntureUtility
     {
         #region 进制转换
         /// <summary>
+        /// 字符串转化为BASE64格式
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <returns></returns>
+        public static string GetBase64String(string msg)
+        {
+            byte[] byteString = System.Text.Encoding.Default.GetBytes(msg);
+            return Convert.ToBase64String(byteString);
+        }
+        /// <summary>
         /// 将二进制转成字符串
         /// </summary>
         /// <param name="s"></param>
@@ -99,6 +109,18 @@ namespace TaskUtility.SigntureUtility
 
         #region CA证书
         /// <summary>
+        /// 证书签名Hash算法类型
+        /// </summary>
+        public enum HalgType
+        {
+            MD5 = 0,
+            SHA1 = 1,
+            SHA256 = 2,
+            HmacSHA1 = 3,
+            HmacMD5 = 4,
+            HamcSHA256 = 5
+        }
+        /// <summary>
         /// 私钥加签
         /// </summary>
         /// <param name="CertFilePath">证书完整路径</param>
@@ -106,7 +128,7 @@ namespace TaskUtility.SigntureUtility
         /// <param name="Text">待签名文本</param>
         /// <param name="encoding">编码规范</param>
         /// <returns></returns>
-        public static string CACertSign(string priCertFilePath, string CertPass, string Text, Encoding encoding)
+        public static string CACertSign(string priCertFilePath, string CertPass, string Text, Encoding encoding, HalgType halg)
         {
             //调用证书（私钥，需要密码）          
             X509Certificate2 privateCert = new X509Certificate2(priCertFilePath, CertPass, X509KeyStorageFlags.Exportable);
@@ -116,7 +138,31 @@ namespace TaskUtility.SigntureUtility
             RSACryptoServiceProvider privateKey1 = new RSACryptoServiceProvider();
             privateKey1.ImportParameters(privateKey.ExportParameters(true));
             byte[] data = encoding.GetBytes(Text);
-            byte[] signature = privateKey1.SignData(data, new SHA1CryptoServiceProvider());
+            byte[] signature = new byte[1024];
+            switch (halg)
+            {
+                case HalgType.MD5:
+                    signature = privateKey1.SignData(data, new MD5CryptoServiceProvider());
+                    break;
+                case HalgType.SHA1:
+                    signature = privateKey1.SignData(data, new SHA1CryptoServiceProvider());
+                    break;
+                case HalgType.SHA256:
+                    signature = privateKey1.SignData(data, new SHA256CryptoServiceProvider());
+                    break;
+                case HalgType.HmacSHA1:
+                    signature = privateKey1.SignData(data, new HMACSHA1());
+                    break;
+                case HalgType.HmacMD5:
+                    signature = privateKey1.SignData(data, new HMACMD5());
+                    break;
+                case HalgType.HamcSHA256:
+                    signature = privateKey1.SignData(data, new HMACSHA256());
+                    break;
+                default:
+                    signature = privateKey1.SignData(data, new MD5CryptoServiceProvider());
+                    break;
+            }
             //对签名密文进行Base64编码 
             return Convert.ToBase64String(signature);
         }
@@ -129,7 +175,7 @@ namespace TaskUtility.SigntureUtility
         /// <param name="RspSign"></param>
         /// <param name="RspText"></param>
         /// <returns></returns>
-        public static bool CAVerifySign(string pubCertFilePath, Encoding encoding, string verifySign, string RspText)
+        public static bool CAVerifySign(string pubCertFilePath, Encoding encoding, string verifySign, string RspText,HalgType halg)
         {
             //调用证书(公钥)            
             X509Certificate2 Cert = new X509Certificate2(pubCertFilePath);
@@ -138,8 +184,23 @@ namespace TaskUtility.SigntureUtility
             publickey1.ImportParameters(PublicKey.ExportParameters(false));
             byte[] rspbyte = encoding.GetBytes(RspText);
             byte[] sign = Convert.FromBase64String(verifySign);
-            return publickey1.VerifyData(rspbyte, new SHA1CryptoServiceProvider(), sign);
-
+            switch (halg)
+            {
+                case HalgType.MD5:
+                    return publickey1.VerifyData(rspbyte, new MD5CryptoServiceProvider(), sign);
+                case HalgType.SHA1:
+                    return publickey1.VerifyData(rspbyte, new SHA1CryptoServiceProvider(), sign);
+                case HalgType.SHA256:
+                    return publickey1.VerifyData(rspbyte, new SHA256CryptoServiceProvider(), sign);
+                case HalgType.HmacSHA1:
+                    return publickey1.VerifyData(rspbyte, new HMACSHA1(), sign);
+                case HalgType.HmacMD5:
+                    return publickey1.VerifyData(rspbyte, new HMACMD5(), sign);
+                case HalgType.HamcSHA256:
+                    return publickey1.VerifyData(rspbyte, new HMACSHA256(), sign);
+                default:
+                    return publickey1.VerifyData(rspbyte, new MD5CryptoServiceProvider(), sign);
+            }
         }
         #endregion
 
@@ -242,7 +303,7 @@ namespace TaskUtility.SigntureUtility
         {
             var data = hashAlgorithm.ComputeHash(encoding.GetBytes(input));
 
-            return BitConverter.ToString(data).Replace("-", "").ToLower();
+            return BitConverter.ToString(data).Replace("-", "");
         }
 
         /// <summary>
