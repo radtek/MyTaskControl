@@ -45,7 +45,8 @@ namespace TaskUtility.Extend
             }
             //ASCII码升序排序
             Array.Sort(unSignArray, string.CompareOrdinal);
-            return string.Join("", unSignArray);
+            string ss = string.Join("", unSignArray);
+            return ss;
         }
         /// <summary>
         /// 转换成decimal

@@ -42,6 +42,7 @@ namespace HongFireSimple
         const string TopQueueName = "topic.justin.queue";
         static void Main(string[] args)
         {
+            #region 线程池超时监听、等待处理代码
             //
             Console.WriteLine("线程等待超时处理-实践");
             using (ManualResetEvent mua = new ManualResetEvent(false))
@@ -54,7 +55,7 @@ namespace HongFireSimple
                     wrok.Unregister(mua);//取消已注册等待操作
                 }
             }
-
+            #endregion
             Console.ReadKey();
 
 
@@ -79,105 +80,107 @@ namespace HongFireSimple
             #endregion
 
             #region RabbitMQ的direct类型Exchange
-            Console.WriteLine("生产者发送RabbitMQ消息...");
-            using (IConnection conn = rabbitMqFactory.CreateConnection())
-            {
-                using (IModel channel = conn.CreateModel())
-                {
-                    channel.ExchangeDeclare(ExchangeName, "direct", durable: true, autoDelete: false, arguments: null);
-                    channel.QueueDeclare(QueueName, durable: true, autoDelete: false, exclusive: false, arguments: null);
-                    channel.QueueBind(QueueName, ExchangeName, routingKey: QueueName);
+            //Console.WriteLine("生产者发送RabbitMQ消息...");
+            //using (IConnection conn = rabbitMqFactory.CreateConnection())
+            //{
+            //    using (IModel channel = conn.CreateModel())
+            //    {
+            //        channel.ExchangeDeclare(ExchangeName, "direct", durable: true, autoDelete: false, arguments: null);
+            //        channel.QueueDeclare(QueueName, durable: true, autoDelete: false, exclusive: false, arguments: null);
+            //        channel.QueueBind(QueueName, ExchangeName, routingKey: QueueName);
 
-                    var props = channel.CreateBasicProperties();
-                    //MQ消息持久化
-                    props.Persistent = true;
-                    for (int i = 0; i < 10; i++)
-                    {
-                        string content = $"Rabbit消息--{i + 1}";
-                        var msgBody = Encoding.UTF8.GetBytes(content);
-                        channel.BasicPublish(exchange: ExchangeName, routingKey: QueueName, basicProperties: props, body: msgBody);
-                        Console.WriteLine($"***发送时间:{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}，{content}发送完成!");
-                    }
-                }
-            }
-            Console.WriteLine("RabbitMQ消息已发送完成...");
+            //        var props = channel.CreateBasicProperties();
+            //        //MQ消息持久化
+            //        props.Persistent = true;
+            //        for (int i = 0; i < 10; i++)
+            //        {
+            //            string content = $"Rabbit消息--{i + 1}";
+            //            var msgBody = Encoding.UTF8.GetBytes(content);
+            //            channel.BasicPublish(exchange: ExchangeName, routingKey: QueueName, basicProperties: props, body: msgBody);
+            //            Console.WriteLine($"***发送时间:{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}，{content}发送完成!");
+            //        }
+            //    }
+            //}
+            //Console.WriteLine("RabbitMQ消息已发送完成...");
 
-            
-            var factory = new ConnectionFactory() { HostName = "192.168.100.205", UserName = "Lixf", Password = "123456", VirtualHost = "/",Port = 5672,AutomaticRecoveryEnabled = true };
-            
-            using (var connection = factory.CreateConnection())
-            using (var channel = connection.CreateModel())
-            {
-                channel.QueueDeclare(queue: "LiFengFeng.queue",
-                                     durable: true,//可持久化到内存
-                                     exclusive: false,
-                                     autoDelete: false,
-                                     arguments: null);
 
-                var consumer = new EventingBasicConsumer(channel);
-                consumer.Received += (model, ea) =>
-                {
-                    var body = ea.Body;
-                    var message = Encoding.UTF8.GetString(body);
-                    Console.WriteLine("******* 接收到消息 {0}", message);
-                    //确认已消费/接收消息
-                    //处理完成，告诉Broker可以服务端可以删除消息，分配新的消息过来
-                    channel.BasicAck(ea.DeliveryTag, false);
-                };
-                //noAck设置false,告诉broker，发送消息之后，消息暂时不要删除，等消费者处理完成再说
-                channel.BasicConsume(queue: "LiFengFeng.queue",
-                                     autoAck: true,"Tags",
-                                     consumer: consumer);
-                
-                Console.WriteLine("  [enter] to exit.");
-                Console.ReadLine();
-            }
+            //var factory = new ConnectionFactory() { HostName = "192.168.100.205", UserName = "Lixf", Password = "123456", VirtualHost = "/",Port = 5672,AutomaticRecoveryEnabled = true };
+
+            //using (var connection = factory.CreateConnection())
+            //using (var channel = connection.CreateModel())
+            //{
+            //    channel.QueueDeclare(queue: "LiFengFeng.queue",
+            //                         durable: true,//可持久化到内存
+            //                         exclusive: false,
+            //                         autoDelete: false,
+            //                         arguments: null);
+
+            //    var consumer = new EventingBasicConsumer(channel);
+            //    consumer.Received += (model, ea) =>
+            //    {
+            //        var body = ea.Body;
+            //        var message = Encoding.UTF8.GetString(body);
+            //        Console.WriteLine("******* 接收到消息 {0}", message);
+            //        //确认已消费/接收消息
+            //        //处理完成，告诉Broker可以服务端可以删除消息，分配新的消息过来
+            //        channel.BasicAck(ea.DeliveryTag, true);
+            //    };
+            //    //noAck设置false,告诉broker，发送消息之后，消息暂时不要删除，等消费者处理完成再说
+            //    channel.BasicConsume(queue: "LiFengFeng.queue",
+            //                         autoAck: true,"Tags",
+            //                         consumer: consumer);
+
+            //    Console.WriteLine("  [enter] to exit.");
+            //    Console.ReadLine();
+            //}
 
             #endregion
 
             #region RabbitMQ的Topic类型Topic
-            //------生产者
-            using (IConnection conn = rabbitMqFactory.CreateConnection())
-            {
-                using (IModel channel = conn.CreateModel())
-                {
-                    channel.ExchangeDeclare(TopExchangeName, "topic", durable: false, autoDelete: false, arguments: null);
-                    channel.QueueDeclare(TopQueueName, durable: false, autoDelete: false, exclusive: false, arguments: null);
-                    channel.QueueBind(TopQueueName, TopExchangeName, routingKey: TopQueueName);
-                    //var props = channel.CreateBasicProperties();
-                    //props.Persistent = true;
-                    for (int i = 0; i < 15; i++)
-                    {
-                        string vadata = $"Topic消息，第{i}个";
-                        var msgBody = Encoding.UTF8.GetBytes(vadata);
-                        channel.BasicPublish(exchange: TopExchangeName, routingKey: TopQueueName, basicProperties: null, body: msgBody);
-                        Console.WriteLine($"***发送时间:{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")},内容：{vadata}");
-                    }
-                }
-            }
-            Console.WriteLine("Topic 消息已发送完成！");
-            Console.ReadLine();
+            string RootKey = "MyTopic";
+            ////------生产者
+            //using (IConnection conn = rabbitMqFactory.CreateConnection())
+            //{
+            //    using (IModel channel = conn.CreateModel())
+            //    {
+            //        channel.ExchangeDeclare(TopExchangeName, "topic", false, false, null);
+            //        channel.QueueDeclare(TopQueueName, false, false, false, null);
+            //        channel.QueueBind(TopQueueName, TopExchangeName, TopQueueName);
+
+            //        var props = channel.CreateBasicProperties();
+            //        props.Persistent = true;//消息持久化
+
+            //        for (int i = 0; i < 5; i++)
+            //        {
+            //            string vadata = $"Topic消息，第{i}个";
+            //            var msgBody = Encoding.UTF8.GetBytes(vadata);
+            //            channel.BasicPublish(exchange: TopExchangeName, routingKey: TopQueueName, basicProperties: props, body: msgBody);
+            //            Console.WriteLine($"***发送时间:{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")},内容：{vadata}");
+            //        }
+            //    }
+            //}
+            //Console.WriteLine("Topic 消息已发送完成！");
 
             //----消费者
             using (IConnection conn = rabbitMqFactory.CreateConnection())
             {
                 using (IModel channel = conn.CreateModel())
                 {
-                    channel.ExchangeDeclare(TopExchangeName, "topic", durable: false, autoDelete: false, arguments: null);
-                    channel.QueueDeclare(TopQueueName, durable: false, autoDelete: false, exclusive: false, arguments: null);
-                    channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
-                    channel.QueueBind(TopQueueName, TopExchangeName, routingKey: TopQueueName);
+                    channel.ExchangeDeclare(TopExchangeName, "topic",false, false,null);
+                    channel.QueueDeclare(TopQueueName,false,false,false,null);
+                    channel.BasicQos(0,1,false);//公平分发
+                    channel.QueueBind(TopQueueName, TopExchangeName, TopQueueName);
                     var consumer = new EventingBasicConsumer(channel);
                     consumer.Received += (model, ea) =>
                     {
                         var msgBody = Encoding.UTF8.GetString(ea.Body);
                         Console.WriteLine(string.Format("***Topic消息-----接收时间:{0}，消息内容：{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), msgBody));
-                        channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                        channel.BasicAck(ea.DeliveryTag, false);//确认消息
                     };
-                    channel.BasicConsume(TopQueueName, autoAck: false, consumer: consumer);
+                    channel.BasicConsume(TopQueueName, false, consumer);
                 }
             }
-
+            Console.WriteLine("Topic 消息接收端已启动！");
             #endregion
             Console.ReadKey();
 

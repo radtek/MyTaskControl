@@ -7,6 +7,7 @@
 * 修改时间:
 * 版本： @version 1.0
 =====================================================*/
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -37,7 +38,7 @@ namespace TaskUtility.NetWork
         /// <param name="charset">Http编码规范</param>
         /// <param name="contentType">请求体类型</param>
         /// <returns></returns>
-        public static string HttpReq(string rootURL,ParamsType paramsType, string bodyParamStr, Encoding encoding, NetType netType, ContentType contentType,string charset = "utf-8",IDictionary queryParams = null)
+        public static string HttpReq(string rootURL,ParamsType paramsType, string bodyParamStr, Encoding encoding, NetType netType, ContentType contentType,string charset,IDictionary queryParams = null)
         {
             string result = string.Empty;
             HttpWebRequest req = null;
@@ -77,9 +78,77 @@ namespace TaskUtility.NetWork
             //URL转码
             return System.Web.HttpUtility.UrlDecode(result, encoding);
         }
+        /// <summary>
+        /// Http请求
+        /// </summary>
+        /// <param name="rootURL">请求地址</param>
+        /// <param name="ParamsType">参数类型</param>
+        /// <param name="queryParams">地址栏参数</param>
+        /// <param name="bodyParamStr">Body参数 可为Json/Text</param>
+        /// <param name="encoding">URL解码编码</param>
+        /// <param name="netType">POST/GET</param>
+        /// <param name="Charset">Http编码规范</param>
+        /// <param name="contentType">请求体类型</param>
+        /// <returns></returns>
+        public static string HttpReq(string rootURL, ParamsType paramsType, string bodyParamStr, Encoding encoding, NetType netType, ContentType contentType, Charset charset, IDictionary queryParams = null)
+        {
+            string result = string.Empty;
+            HttpWebRequest req = null;
+            switch (paramsType)
+            {
+                case ParamsType.Header:
+                    req = (HttpWebRequest)WebRequest.Create($"{rootURL}");
+                    req.Headers.Add(GetWebHeaderCollection(queryParams));
+                    break;
+                case ParamsType.QueryParams:
+                    req = (HttpWebRequest)WebRequest.Create($"{rootURL}?{KeyValueHandle(queryParams)}");
+                    break;
+                case ParamsType.NoParams:
+                    req = (HttpWebRequest)WebRequest.Create($"{rootURL}");
+                    break;
+                default:
+                    break;
+            }
+            req.Method = GetNetType(netType);
+            if (charset == Charset.UTF_8)
+            {
+                req.ContentType = $"{GetContentType(contentType)}{"utf-8"}";
+            }
+            else
+            {
+                req.ContentType = $"{GetContentType(contentType)}{charset}";
+            }
+            #region 添加Post 参数
+            byte[] data = encoding.GetBytes(bodyParamStr);
+            req.ContentLength = data.Length;
+            using (Stream reqStream = req.GetRequestStream())
+            {
+                reqStream.Write(data, 0, data.Length);
+                reqStream.Close();
+            }
+            #endregion
+            HttpWebResponse resp = (HttpWebResponse)req.GetResponse();
+            Stream stream = resp.GetResponseStream();
+            //获取响应内容
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                result = reader.ReadToEnd();
+            }
+            //URL转码
+            return System.Web.HttpUtility.UrlDecode(result, encoding);
+        }
         #endregion
 
         #region Http枚举
+        /// <summary>
+        /// 编码方式
+        /// </summary>
+        public enum Charset
+        {
+            UTF_8 = 0,
+            Uncicode = 1,
+            GB2312 = 2
+        }
         /// <summary>
         /// HttpRequestType
         /// </summary>
@@ -160,6 +229,17 @@ namespace TaskUtility.NetWork
         #endregion
 
         #region Http辅助方法
+        /// <summary>
+        /// 忽略Null值序列化Json
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public static string ObjectToJsonIgnoreNull(object obj)
+        {
+            //更多序列化/反序列化设置，可以通过显示设置JsonSerializerSettings枚举/属性来设置格式
+            JsonSerializerSettings mJsonSettings = new JsonSerializerSettings {NullValueHandling = NullValueHandling.Ignore };
+            return JsonConvert.SerializeObject(obj, Formatting.Indented, mJsonSettings);
+        }
         /// <summary>
         /// 键值对请求参数拼接
         /// </summary>
