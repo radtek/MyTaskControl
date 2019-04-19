@@ -175,15 +175,13 @@ namespace TaskUtility.SigntureUtility
         /// <param name="RspSign"></param>
         /// <param name="RspText"></param>
         /// <returns></returns>
-        public static bool CAVerifySign(string pubCertFilePath, Encoding encoding, string verifySign, string RspText,HalgType halg)
+        public static bool CAVerifySign(string pubCertFilePath, byte[] sign , byte[] rspbyte,HalgType halg)
         {
             //调用证书(公钥)            
             X509Certificate2 Cert = new X509Certificate2(pubCertFilePath);
             RSACryptoServiceProvider PublicKey = (RSACryptoServiceProvider)Cert.PublicKey.Key;
             RSACryptoServiceProvider publickey1 = new RSACryptoServiceProvider();
             publickey1.ImportParameters(PublicKey.ExportParameters(false));
-            byte[] rspbyte = encoding.GetBytes(RspText);
-            byte[] sign = Convert.FromBase64String(verifySign);
             switch (halg)
             {
                 case HalgType.MD5:
