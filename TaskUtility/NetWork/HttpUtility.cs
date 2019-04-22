@@ -119,12 +119,15 @@ namespace TaskUtility.NetWork
                 req.ContentType = $"{GetContentType(contentType)}{charset}";
             }
             #region 添加Post 参数
-            byte[] data = encoding.GetBytes(bodyParamStr);
-            req.ContentLength = data.Length;
-            using (Stream reqStream = req.GetRequestStream())
+            if (netType == NetType.POST)
             {
-                reqStream.Write(data, 0, data.Length);
-                reqStream.Close();
+                byte[] data = encoding.GetBytes(bodyParamStr);
+                req.ContentLength = data.Length;
+                using (Stream reqStream = req.GetRequestStream())
+                {
+                    reqStream.Write(data, 0, data.Length);
+                    reqStream.Close();
+                }
             }
             #endregion
             HttpWebResponse resp = (HttpWebResponse)req.GetResponse();

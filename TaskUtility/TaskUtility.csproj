@@ -81,6 +81,7 @@
     <Compile Include="Interface\IDownTask.cs" />
     <Compile Include="Interface\IUpTask.cs" />
     <Compile Include="MyTask.cs" />
+    <Compile Include="NetWork\DataFormat.cs" />
     <Compile Include="NetWork\Ftp.cs" />
     <Compile Include="NetWork\HttpUtility.cs" />
     <Compile Include="NetWork\Person.cs" />
