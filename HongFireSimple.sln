@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28010.2026
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.202
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HangFireSimple", "HongFireSimple\HangFireSimple.csproj", "{C009A1A8-4932-4D94-A1CA-FC3B81E47B39}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Demo", "Demo\Demo.csproj", "{2E3469DC-34CB-431B-ACE6-C2F0DFD11E69}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskUtility", "TaskUtility\TaskUtility.csproj", "{AF506CB2-19B2-4006-B617-CF05AEFA457A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiFFHelper", "LiFFHelper\LiFFHelper.csproj", "{04695DE8-7D70-4CA0-A8BF-39F4DD6313D2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{AF506CB2-19B2-4006-B617-CF05AEFA457A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AF506CB2-19B2-4006-B617-CF05AEFA457A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AF506CB2-19B2-4006-B617-CF05AEFA457A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04695DE8-7D70-4CA0-A8BF-39F4DD6313D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04695DE8-7D70-4CA0-A8BF-39F4DD6313D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04695DE8-7D70-4CA0-A8BF-39F4DD6313D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04695DE8-7D70-4CA0-A8BF-39F4DD6313D2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

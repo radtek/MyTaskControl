@@ -80,6 +80,7 @@
     <Compile Include="Interface\IControlTask.cs" />
     <Compile Include="Interface\IDownTask.cs" />
     <Compile Include="Interface\IUpTask.cs" />
+    <Compile Include="LogManager\LogUitility.cs" />
     <Compile Include="MyTask.cs" />
     <Compile Include="NetWork\DataFormat.cs" />
     <Compile Include="NetWork\Ftp.cs" />
