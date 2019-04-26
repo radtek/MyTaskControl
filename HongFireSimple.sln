@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskUtility", "TaskUtility\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiFFHelper", "LiFFHelper\LiFFHelper.csproj", "{04695DE8-7D70-4CA0-A8BF-39F4DD6313D2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskDemo", "TaskDemo\TaskDemo.csproj", "{E036E04A-38F0-4F70-A723-B7C895D7F28F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{04695DE8-7D70-4CA0-A8BF-39F4DD6313D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{04695DE8-7D70-4CA0-A8BF-39F4DD6313D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{04695DE8-7D70-4CA0-A8BF-39F4DD6313D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E036E04A-38F0-4F70-A723-B7C895D7F28F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E036E04A-38F0-4F70-A723-B7C895D7F28F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E036E04A-38F0-4F70-A723-B7C895D7F28F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E036E04A-38F0-4F70-A723-B7C895D7F28F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
