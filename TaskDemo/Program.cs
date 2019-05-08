@@ -6,12 +6,19 @@ using System.Threading.Tasks;
 using static System.Console;
 using System.Threading;
 using LiFFHelper.LogManager;
+using static System.Threading.Thread;
 
 namespace TaskDemo
 {
     class Program
     {
         static LogUitility log = new LogUitility(AppContext.BaseDirectory + @"\Log");
+        static string EmulateProcessing(string taskName)
+        {
+            Sleep(TimeSpan.FromMilliseconds(new Random(DateTime.Now.Millisecond).Next(250, 350)));
+            WriteLine($"{taskName} task was processed on a" + $"TheadId is {CurrentThread.ManagedThreadId}");
+            return taskName;
+        }
         static async Task AsyncLambda()
         {
             Func<string, Task<string>> lambdaTask = async name =>
@@ -77,6 +84,38 @@ namespace TaskDemo
         }
         static void Main(string[] args)
         {
+            //尽可能并行执行提供的每个操作
+            //NameSpace:System.Threading.Tasks
+            Parallel.Invoke(() => EmulateProcessing("Task1"),
+                () => EmulateProcessing("Task2"),
+                () => EmulateProcessing("Task3")
+                );
+            var pcts = new CancellationTokenSource();
+            //并行迭代
+            var result = Parallel.ForEach(Enumerable.Range(1, 30), 
+
+                new ParallelOptions() { CancellationToken = pcts.Token,
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    TaskScheduler = TaskScheduler.Default }, 
+
+                (i, state) =>
+                  {
+                      WriteLine(i);
+                      if (i == 20)
+                      {
+                          //告知 System.Threading.Tasks.Parallel 循环应在系统方便的时候尽早停止执行当前迭代之外的迭代。
+                          state.Break();
+                          WriteLine($"Loop is Stop:{state.IsStopped}");
+                      }
+                  });
+            WriteLine("-------------");
+            //获取指示循环已完成运行，以便所有的循环迭代期间执行，并且该循环没有收到提前结束的请求。
+            WriteLine($"Is Completed:{result.IsCompleted}");
+            //从中获取的最低迭代索引 System.Threading.Tasks.ParallelLoopState.Break 调用。
+            WriteLine($"Lowest break iteration:{result.LowestBreakIteration}");
+
+            WriteLine("------------------------------");
+            ReadLine();
             Task tq = MyAsyncWithAwaitQuickly();
             tq.Wait();
             //Task tl = MyAsyncWithAwaitLow();

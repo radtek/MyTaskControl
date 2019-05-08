@@ -10,8 +10,32 @@ namespace LiFFHelper.LogManager
 {
     public class LogUitility
     {
+        /// <summary>
+        /// 读取配置文件
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        public List<string> GetConfigInfo(string file)
+        {
+            try
+            {
+                List<string> config = new List<string>();
+                StreamReader sr = new StreamReader(file, Encoding.UTF8);
+                string content;
+                while ((content = sr.ReadLine()) != null)
+                {
+                    config.Add(content.ToString());
+                }
+                return config;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
         public void Error(Exception err) { Log(LogTags.Error, null, err); }
         public void Error(string Message) { Log(LogTags.Error, Message); }
+        public void Error(string Message, Exception err) { Log(LogTags.Error, Message, err); }
         public void Debug(string Message) { Log(LogTags.Debug, Message); }
         public void Info(string Message) { Log(LogTags.Info, Message); }
         public void Uat(string Message) { Log(LogTags.Uat, Message); }
@@ -89,7 +113,7 @@ namespace LiFFHelper.LogManager
             sw.WriteLine("".PadLeft(70, '━'));
             sw.WriteLine($"{Environment.NewLine}记录时间：{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}" +
                 $"{Environment.NewLine}日志类型：{tags.ToString()}" +
-                $"{Environment.NewLine}日志内容:{logInfo??"未经处理的异常"}{Environment.NewLine}");
+                $"{Environment.NewLine}日志内容：{logInfo??"NULL"}{Environment.NewLine}");
             if (tags == LogTags.Error && err != null)
             {
                 sw.WriteLine(
