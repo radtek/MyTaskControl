@@ -42,6 +42,7 @@ namespace LiFFHelper.LogManager
         public void Request(string Message) { Log(LogTags.Request, Message); }
         public void Response(string Message) { Log(LogTags.Response, Message); }
         public void Test(string Message) { Log(LogTags.Test, Message); }
+        public void Log(string Message) { Log(LogTags.Log, Message); }
 
         private string LogPath;
         public LogUitility(string path)
@@ -66,14 +67,14 @@ namespace LiFFHelper.LogManager
                 fso.Close();
                 fso.Dispose();
                 StreamWriter SW = File.AppendText(FilePath);
-                SW.WriteLine("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓");
-                SW.WriteLine("┃                应用日志文件  v1.0                ┃");
-                SW.WriteLine("┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫");
-                SW.WriteLine("┃         公司 : 雨人软件(www.Romens.com)          ┃");
-                SW.WriteLine("┃         作者 : 李锋锋                            ┃");
-                SW.WriteLine("┃         说明 : RestFulApi接口日志记录             ┃");
-                SW.WriteLine($"┃     创建时间 : {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}          ┃");
-                SW.WriteLine("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛");
+                SW.WriteLine("┏"+"".PadRight(70, '━') +"┓");
+                SW.WriteLine("┃" + "".PadRight(10, ' ')+"应用日志文件".PadRight(33,' ')+"┃");
+                SW.WriteLine("┣" + "".PadRight(70, '━') + "┫");
+                SW.WriteLine("┃" + "".PadRight(10, ' ') + "公司 ：雨人软件".PadRight(32, ' ') + "┃");
+                SW.WriteLine("┃" + "".PadRight(10, ' ') + "作者 : 李锋锋".PadRight(34,' ')+"┃");
+                SW.WriteLine("┃" + "".PadRight(10, ' ') + "说明 : API接口日志记录".PadRight(31,' ')+"┃");
+                SW.WriteLine($"┃" + "".PadRight(10, ' ') + "时间 : "+ DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff").PadRight(32,' ')+"┃");
+                SW.WriteLine("┗"+ "".PadRight(70, '━') + "┛");
                 SW.WriteLine("");
                 SW.Flush();
                 SW.Close();
@@ -92,7 +93,8 @@ namespace LiFFHelper.LogManager
             Test = 3,
             Request = 4,
             Response = 5,
-            Uat = 6
+            Uat = 6,
+            Log = 7
         }
         public void Log(LogTags tags,string logInfo = null,Exception err = null)
         {

@@ -569,10 +569,10 @@ namespace LiFFHelper.SigntureUtility
             {
                 var keyBytes = Encoding.UTF8.GetBytes(key);
                 //var ivBytes = Encoding.UTF8.GetBytes(iv);
-
+                
                 var des = DES.Create();
                 des.Mode = CipherMode.ECB; //兼容其他语言的 Des 加密算法
-                des.Padding = PaddingMode.Zeros; //自动补 0
+                des.Padding = PaddingMode.PKCS7; //自动补 0
 
                 using (var ms = new MemoryStream())
                 {
@@ -593,7 +593,77 @@ namespace LiFFHelper.SigntureUtility
                 return input;
             }
         }
+        /// <summary>
+        /// Java的DESede加密对应C#里的DES-ECB-PKCS7加密
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public static string DESedeEncrypt(string data, string key)
+        {
+            byte[] deskey = new byte[24];
+            byte[] SkKey = Encoding.UTF8.GetBytes(key);
+            if (deskey.Length > SkKey.Length)
+            {
+                Array.Copy(SkKey, 0, deskey, 0, SkKey.Length);
+            }
+            else
+            {
+                Array.Copy(SkKey, 0, deskey, 0, SkKey.Length);
+            }
+            SymmetricAlgorithm syag = new TripleDESCryptoServiceProvider();
+            syag.Mode = CipherMode.ECB;
+            syag.Padding = PaddingMode.PKCS7;
+            syag.Key = deskey;
 
+            byte[] byt;
+            ICryptoTransform ct = syag.CreateEncryptor(syag.Key, syag.IV);
+            byt = Encoding.UTF8.GetBytes(data);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                CryptoStream cs = new CryptoStream(ms, ct, CryptoStreamMode.Write);
+                cs.Write(byt, 0, byt.Length);
+                cs.FlushFinalBlock();
+                cs.Close();
+                return Convert.ToBase64String(ms.ToArray());
+            }
+        }
+        /// <summary>
+        /// Java的DESede解密对应C#里的DES-ECB-PKCS7解密
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public static string DESedeDecrypt(string data, string key)
+        {
+            data = data.Replace(" ", "+");
+            byte[] deskey = new byte[24];
+            byte[] SkKey = Encoding.UTF8.GetBytes(key);
+            if (deskey.Length > SkKey.Length)
+            {
+                Array.Copy(SkKey, 0, deskey, 0, SkKey.Length);
+            }
+            else
+            {
+                Array.Copy(SkKey, 0, deskey, 0, SkKey.Length);
+            }
+            SymmetricAlgorithm syag = new TripleDESCryptoServiceProvider();
+            syag.Mode = CipherMode.ECB;
+            syag.Padding = PaddingMode.PKCS7;
+            syag.Key = deskey;
+
+            byte[] byt;
+            ICryptoTransform ct = syag.CreateDecryptor(syag.Key, syag.IV);
+            byt = Convert.FromBase64String(data);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                CryptoStream cs = new CryptoStream(ms, ct, CryptoStreamMode.Write);
+                cs.Write(byt, 0, byt.Length);
+                cs.FlushFinalBlock();
+                cs.Close();
+                return Encoding.UTF8.GetString(ms.ToArray());
+            }
+        }
         /// <summary>
         /// DES 解密
         /// </summary>

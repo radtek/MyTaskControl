@@ -77,9 +77,9 @@
     <Compile Include="DbAccess\SQLIteDbParameter.cs" />
     <Compile Include="DbAccess\SqlServerParameter.cs" />
     <Compile Include="Extend\SafeExtendFormat.cs" />
-    <Compile Include="Interface\IControlTask.cs" />
-    <Compile Include="Interface\IDownTask.cs" />
-    <Compile Include="Interface\IUpTask.cs" />
+    <Compile Include="Extend\Interface\IControlTask.cs" />
+    <Compile Include="Extend\Interface\IDownTask.cs" />
+    <Compile Include="Extend\Interface\IUpTask.cs" />
     <Compile Include="LogManager\LogUitility.cs" />
     <Compile Include="MyTask.cs" />
     <Compile Include="NetWork\DataFormat.cs" />
