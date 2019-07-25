@@ -19,12 +19,132 @@ using System.Threading.Tasks.Dataflow;
 using LiFFHelper.LogManager;
 using System.Reactive.Subjects;
 using System.Reactive.Disposables;
+using RestSharp;
+using ApiDocHelper.Model;
+using Newtonsoft.Json;
+using TaskDemo.Rx;
+using Nito.AsyncEx;
+using System.Windows.Media;
+using System.Timers;
+//任务组顺序执行
 
 namespace TaskDemo
 {
     class Program
     {
         static LogUitility log = new LogUitility(AppContext.BaseDirectory + @"\Log");
+
+        static Random r = new Random();
+
+        private static Mutex mut = new Mutex();
+        private const int numThreads = 5;
+        private static Semaphore empty = new Semaphore(5, 5);//空闲缓冲区
+        private static Semaphore full = new Semaphore(0, 5);//生产者-消费者模拟
+
+        static async Task<int> DelayAndReturnAsync(int i)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(i));
+            return i;
+        }
+        static async Task AwaitAndProcessAsync(Task<int> t)
+        {
+            var rr = await t;
+            Trace.Write($"Await:{rr}");
+        }
+        static void WriteSequenceToConsole(IObservable<string> sequence)
+        {
+            //同样的结果（简写方法）
+            //sequence.Subscribe(value=>Console.WriteLine(value));
+            sequence.Subscribe(Console.WriteLine);
+        }
+
+        #region 模拟生产者消费者关系
+        private static void Producer()
+        {
+            Console.WriteLine("{0}已经启动", Thread.CurrentThread.Name);
+            //从空闲缓冲区拿到一个操作权
+            empty.WaitOne();//对empty进行P操作
+            //独占操作
+            mut.WaitOne();//对mut进行P操作
+            Console.WriteLine("{0}放入数据到临界区", Thread.CurrentThread.Name);
+            Thread.Sleep(1000);
+            mut.ReleaseMutex();//对mut进行V操作
+            //从工作区释放一个操作权
+            full.Release();//对full进行V操作
+        }
+        private static void Customer()
+        {
+            Console.WriteLine("{0}已经启动", Thread.CurrentThread.Name);
+            Thread.Sleep(5000);
+            //获取工作区一个操作权
+            full.WaitOne();//对full进行P操作
+            mut.WaitOne();//对mut进行P操作
+            Console.WriteLine("{0}读取临界区", Thread.CurrentThread.Name);
+            mut.ReleaseMutex();//对mut进行V操作
+            //释放缓冲区一个操作权
+            empty.Release();//对empty进行V操作
+        }
+        #endregion 
+
+        #region 进程互斥
+        //同步
+        private static void UseResource()
+        {            // 相当于P操作
+            mut.WaitOne();
+            /*下面代码是线程真正的工作*/
+            Console.WriteLine("{0}已经进入临界区", Thread.CurrentThread.Name);
+            Random r = new Random();
+            int rNum = r.Next(2000);
+
+            Console.WriteLine("{0}执行操作，执行时间为{1}ms", Thread.CurrentThread.Name, rNum);
+            Thread.Sleep(rNum);
+
+            Console.WriteLine("{0}已经离开临界区\r\n",
+                Thread.CurrentThread.Name);            /*线程工作结束*/
+            // 相当于V操作
+            mut.ReleaseMutex();
+        }        //互斥
+        #endregion
+
+        #region 进程同步（同一进程不同线程处理同一个任务）
+        private static void Proc1()
+        {
+            mut.WaitOne();
+            Console.WriteLine("线程1执行操作....");
+            Thread.Sleep(3000);
+            //释放Mutex一次。
+            mut.ReleaseMutex();//V操作
+
+        }
+        private static void Proc2()
+        {
+            //阻止当前线程，直到当前Thread收到信号。
+            mut.WaitOne();//P操作
+            Console.WriteLine("线程2执行操作....");
+            mut.WaitOne();
+        }
+        #endregion
+
+        #region 0613Linq使用探索
+        //一次性全部加载到集合中
+        static IEnumerable<int> GetList(int count)
+        {
+            List<int> list = new List<int>();
+            for (int i = 0; i < count; i++)
+            {
+                list.Add(r.Next(10));
+            }
+            return list;
+        }
+        //按需所取--调用一次就查询一次
+        static IEnumerable<int> YieldGetList(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                yield return r.Next(10);
+            }
+        }
+        #endregion
 
         #region 0610使用TPL数据流库来实现并行管道
         static async Task ProcessAsyncChronous()
@@ -37,7 +157,7 @@ namespace TaskDemo
                 {
                     cts.Cancel();
                 }
-            },cts.Token);
+            }, cts.Token);
 
             var inputBlock = new BufferBlock<int>(new DataflowBlockOptions
             {
@@ -52,18 +172,18 @@ namespace TaskDemo
                 WriteLine($"Decimal converter sent {result} to the next stage on" + $"Thread id {CurrentThread.ManagedThreadId}");
                 Sleep(TimeSpan.FromMilliseconds(_rnd.Next(200)));
                 return result;
-            },new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 4,CancellationToken = cts.Token});
+            }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 4, CancellationToken = cts.Token });
             //使用指定的Func委托函数和Tasks.Dataflow.ExecutionDataflowBlockOptions(操作配置)
             var stringifyBlock = new TransformBlock<decimal, string>(n => {
-                string result = $"--{n.ToString("C",CultureInfo.GetCultureInfo("en-us"))}";
+                string result = $"--{n.ToString("C", CultureInfo.GetCultureInfo("en-us"))}";
                 WriteLine($"String Formatter sent {result} to next stage on thread id {CurrentThread.ManagedThreadId}");
                 Sleep(TimeSpan.FromMilliseconds(_rnd.Next(200)));
                 return result;
-            },new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 4,CancellationToken = cts.Token});
+            }, new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 4, CancellationToken = cts.Token });
             //使用指定的Func委托函数和Tasks.Dataflow.ExecutionDataflowBlockOptions(操作配置)
             var outputBlock = new ActionBlock<string>(s => {
                 WriteLine($"The final result is {s} on thread id {CurrentThread.ManagedThreadId}");
-            },new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 4,CancellationToken = cts.Token});
+            }, new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 4, CancellationToken = cts.Token });
             //将源数据连接传递到指定的TransformBlock
             //可传递指定的DataflowLinkOptions配置参数来规定连接属性
             inputBlock.LinkTo(convertToDecimalBlock, new DataflowLinkOptions() { PropagateCompletion = true });
@@ -309,10 +429,312 @@ namespace TaskDemo
                 WriteLine(item);
             }
         }
-#endregion
+        #endregion
 
-        static void Main(string[] args)
+        //使用async关键字的方法就必须使用Task<TResult>作为返回值
+        public static async Task<int> MathTaskDemo()
         {
+            Task<int> mathA = Task.Factory.StartNew(() =>
+            {
+                int a = 5;
+                throw new IndexOutOfRangeException("异常A");
+                return a * 2;
+            });
+            Task<int> mathB = Task.Factory.StartNew(() => {
+                int a = 5;
+                throw new IndexOutOfRangeException("异常A");
+                return a * 3;
+            });
+            //await--等待异步方法执行完成并获取结果
+            Task<int> c = await Task.WhenAny(mathA, mathB);
+            //await--等待异步方法执行完成并获取结果
+            return await c;
+        }
+
+
+        public static void SystemLog(string Message, EventLogEntryType type, string LogName = null)
+        {
+            string SourceLogName = "Romens_RuntimeLog";
+            if (string.IsNullOrEmpty(LogName))
+            {
+                LogName = "RuntimeLog";
+            }
+            if (!EventLog.SourceExists(SourceLogName))
+            {
+                if (!EventLog.Exists(LogName))
+                {
+                    EventLog.CreateEventSource(SourceLogName, LogName);
+                }
+                else
+                {
+                    EventLog.DeleteEventSource(SourceLogName);
+                    EventLog.CreateEventSource(SourceLogName, LogName);
+                }
+            }
+            EventLog.WriteEntry(SourceLogName, Message, type);
+        }
+        static void InvertMatrices(IEnumerable<Matrix> matrixs)
+        {
+            Parallel.ForEach(matrixs, (m, s) => {
+                if (!m.HasInverse)
+                    s.Stop();//在循环内部执行stop
+                else
+                    m.Invert();
+            });
+        }
+        static void Rotate(IEnumerable<Matrix> matrixs, float degress, CancellationTokenSource cts)
+        {
+            //使用CancellationToken取消并行循环
+            Parallel.ForEach(matrixs, new ParallelOptions { CancellationToken = cts.Token }, m => {
+                m.RotateAt(0, 0, 0);
+            });
+        }
+        static int ParallelSum(IEnumerable<int> data)
+        {
+            object locker = new object();
+            int result = 0;
+            Parallel.ForEach(
+                //数据源
+                source: data,
+                //开始值
+                localInit: () => 0, 
+                //并行处理Action
+                body: (item, state, localvalue) => localvalue + item,
+                //处理完成的结果委托回调
+                localFinally: localvalue => {
+                    lock (locker)
+                     result += localvalue;
+                 });
+            return result;
+        }
+        static int PLINQSum(IEnumerable<int> data)
+        {
+            return data.AsParallel().Sum();
+        }
+        static int PLINQSum2(IEnumerable<int> data)
+        {
+            return data.AsParallel().Aggregate(
+                seed: 0,
+                func: (sum, item) => sum + item
+                );
+        }
+        static int InvertMatricesNoAble(IEnumerable<Matrix> matrixs)
+        {
+            object mutex = new object();
+            
+            int unableInvertCount = 0;
+            Parallel.For(0, 20, (l, s) => {
+                if (s.IsExceptional)
+                {
+                    
+                } 
+            });
+            Parallel.ForEach(matrixs, m => {
+                if (m.HasInverse)
+                {
+                    m.Invert();
+                }
+                else
+                {
+                    lock (mutex)
+                    {
+                        unableInvertCount++;
+                    }
+                }
+
+            });
+            return unableInvertCount;
+        }
+
+        static async Task Main(string[] args)
+        {
+            Form1 f = new Form1();
+            f.ShowDialog();
+            //TaskScheduler.Current
+            //在From程序中可传递UI线程的上下文
+            //var uiContext = SynchronizationContext.Current;
+            WriteLine($"UI线程ID：{CurrentThread.ManagedThreadId}");
+            Observable.Interval(TimeSpan.FromSeconds(1))
+                .ObserveOn(Scheduler.Default)
+                .Subscribe(x => WriteLine($"Interval {x} On Thread:{Environment.CurrentManagedThreadId}"));
+            WriteLine("----------分割线----------");
+            ReadLine();
+            var timer = new System.Timers.Timer(1000) { Enabled = true };
+            //方法1
+            //var ticks = Observable.FromEventPattern<ElapsedEventHandler, ElapsedEventArgs>(
+            //    //转换器  ElapsedEventHandler转换成ElapsedEventArgs
+            //    handler => (s, a) => handler(s, a),
+            //    //订阅退阅
+            //    handler => timer.Elapsed += handler,
+            //    handler => timer.Elapsed -= handler
+            //    );
+            //方法2
+            //使用反射机制，转换并订阅退订Timer的Elapsed事件
+            var ticks = Observable.FromEventPattern(timer, "Elapsed");
+            //data.EventArgs依然是强类型
+            ticks.Subscribe(data => WriteLine($"On Next:{((ElapsedEventArgs)data.EventArgs).SignalTime}"));
+            //ticks.Subscribe(data => WriteLine($"On Next:{data.EventArgs.SignalTime}"));
+
+
+
+            var progress = new Progress<int>();
+            //订阅与退订
+            var progressSupports = Observable.FromEventPattern<int>(
+                handler => progress.ProgressChanged += handler,
+                handler => progress.ProgressChanged -= handler
+                );
+            //data.EventArg是强类型的int
+            progressSupports.Subscribe(data => WriteLine($"On Next:{data.EventArgs}"));
+
+
+            var mulitplyBlock = new TransformBlock<int, int>(
+                item => item*2,
+                new ExecutionDataflowBlockOptions
+                {
+                    MaxDegreeOfParallelism = DataflowBlockOptions.Unbounded
+                }
+                );
+            var substract = new TransformBlock<int, int>(item =>item-2);
+            //mulitplyBlock相当于那个需要计算量很大的数据流块，所以开启了并行处理的方式
+            //上面的设置，可以允许执行任意数量的并行任务
+            mulitplyBlock.LinkTo(substract);
+
+            var sourceBuffer = new BufferBlock<int>();
+            var operation = new DataflowBlockOptions { BoundedCapacity = 1 };
+            var targetA = new BufferBlock<int>(operation);
+            var targetB = new BufferBlock<int>(operation);
+            //A的缓冲区>1时，数据会流向B
+            sourceBuffer.LinkTo(targetA);
+            sourceBuffer.LinkTo(targetB);
+
+
+            var mutliplayBlock = new TransformBlock<int, int>(item => item*2);
+            var subtractBlock = new TransformBlock<int, int>(item => item - 2);
+            //建立连接后，从mutliplayBlock出来的数据将进入subtractBlock
+            mutliplayBlock.LinkTo(subtractBlock);
+
+            var options = new DataflowLinkOptions { PropagateCompletion = true };
+            mutliplayBlock.LinkTo(subtractBlock,options);
+            //....
+            //第一块的完成的情况自动传递给第二个块
+            mutliplayBlock.Complete();
+            await subtractBlock.Completion;
+
+            int[] demoInts = new int[]{1, 2, 3};
+            int intResult = ParallelSum(demoInts);
+            int pinqresult = PLINQSum(demoInts);//结果：6
+
+            Task<int> TaskA = DelayAndReturnAsync(3);
+            Task<int> TaskB = DelayAndReturnAsync(2);
+            Task<int> TaskC = DelayAndReturnAsync(1);
+            var taskArray = new[] {TaskA,TaskB,TaskC };
+            foreach (var item in taskArray.OrderByCompletion())
+            {
+                var rr = await item;
+                Trace.Write($"Task Order Result：{rr}");
+            }
+            WriteLine("-------------------------");
+            ReadLine();
+            
+            taskArray = new[] { TaskA, TaskB, TaskC };
+            var processTasks = (from t in taskArray select AwaitAndProcessAsync(t)).ToArray();
+            await Task.WhenAll(processTasks);
+            WriteLine("-------------------------");
+            ReadLine();
+            foreach (var t in taskArray)
+            {
+                var rrTask = await t;
+                Trace.Write($"Trace:{rrTask}");
+            }
+            ReadLine();
+            //await--等待异步方法执行完成并获取结果
+            int Mathresult = await MathTaskDemo();
+            WriteLine(Mathresult.ToString());
+
+
+            #region ReplaySubject <T>缓存值的功能，然后为任何延迟订阅重播它们
+            var sub2 = new ReplaySubject<string>();
+            sub2.OnNext("a");
+            WriteSequenceToConsole(sub2);
+            sub2.OnNext("b");
+            sub2.OnNext("c");
+            Console.ReadKey();
+            
+            var sub1 = new Subject<string>();
+            sub1.OnNext("a");
+            //我们已经将我们的第一个数据移到我们的订阅之前
+            WriteSequenceToConsole(sub1);
+            sub1.OnNext("b");
+            sub1.OnNext("c");
+            Console.ReadKey();
+            #endregion
+
+
+            #region 0628Rx响应式编程学习
+            WriteLine("IObserable的抽象实现----------"); 
+            //IObserable的抽象实现
+            var subject = new Subject<string>();
+            WriteSequenceToConsole(subject);
+            subject.OnNext("a");
+            subject.OnNext("b");
+            subject.OnNext("c");
+            Console.ReadKey();
+
+            #endregion
+
+            #region 0627Rx响应式编程学习
+            var numbers = new MySequenceOfNumbers();
+            var observer = new MyConsoleObserver<int>();
+            numbers.Subscribe(observer);
+            Console.ReadLine();
+            #endregion
+
+
+
+            #region 生产者消费者模拟
+            Console.WriteLine("生产者消费者模拟......");
+            for (int i = 1; i < 9; i++)
+            {
+                Thread T1 = new Thread(new ThreadStart(Producer));
+                Thread T2 = new Thread(new ThreadStart(Customer));
+                T1.Name = String.Format("生产者线程{0}", i);
+                T2.Name = String.Format("消费者线程{0}", i);
+                T1.Start();
+                T2.Start();
+            }
+            Console.ReadKey();
+            #endregion
+
+            #region 进程互斥
+            for (int i = 0; i <= numThreads; i++)
+            {
+                Thread myThread = new Thread(new ThreadStart(UseResource));
+                myThread.Name = String.Format("线程{0}", i + 1);
+                myThread.Start();
+            }
+            Console.ReadKey();
+            #endregion
+
+            #region 进程同步（同一进程不同线程处理同一个任务）
+            Console.WriteLine("进程1执行完了进程2才能执行.......");
+            Thread Thread1 = new Thread(new ThreadStart(Proc1));
+            Thread Thread2 = new Thread(new ThreadStart(Proc2));
+            Thread1.Start();
+            Thread2.Start();
+            Console.ReadKey();
+            #endregion
+
+            #region 0613Linq使用探索
+
+            foreach (int item in YieldGetList(5))
+                Console.WriteLine(item);
+
+            foreach (int item in GetList(5))
+                Console.WriteLine(item);
+            Console.ReadKey();
+
+            #endregion
+
             //.SubscribeOn(NewThreadScheduler.Default)
             #region 使用SubscribeOn控制订阅（subscribing）的上下文
             WriteLine("Starting on threadId:{0}", Thread.CurrentThread.ManagedThreadId);

@@ -53,36 +53,45 @@ namespace LiFFHelper.NetWork
                 return serializer.Deserialize(sr) as T;
             }
         }
-        public static string XmlSerialize<T>(T obj)
+        /// <summary>
+        /// 干净Xml序列化
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="obj"></param>
+        /// <param name="encoding"></param>
+        /// <returns></returns>
+        public static string XmlSerialize<T>(T obj, Encoding encoding)
         {
-            using (StringWriter sw = new StringWriter())
+            using (MemoryStream memoryStream = new MemoryStream())
             {
-                Type t = obj.GetType();
-                XmlSerializer serializer = new XmlSerializer(obj.GetType());
+                XmlSerializer xmlSerializer = new XmlSerializer(obj.GetType());
+                //序列化对象
                 XmlSerializerNamespaces namespaces = new XmlSerializerNamespaces();
-                namespaces.Add(string.Empty, string.Empty);
-                serializer.Serialize(sw, obj, namespaces);
-                sw.Close();
-                return sw.ToString();
+                namespaces.Add("", "");
+                XmlTextWriter xmlTextWriter = new XmlTextWriter(memoryStream, encoding);
+                xmlTextWriter.Formatting = System.Xml.Formatting.None;
+                xmlSerializer.Serialize(xmlTextWriter, obj, namespaces);
+                xmlTextWriter.Flush();
+                xmlTextWriter.Close();
+                return encoding.GetString(memoryStream.ToArray());
             }
         }
-        public static string XmlSerializeFormat<T>(T obj)
+        public static string XmlSerializeNoHeader<T>(T obj, Encoding encoding)
         {
-            StringBuilder sb = new StringBuilder(XmlSerialize(obj));
-            sb.Replace("<?xml version=\"1.0\" encoding=\"utf-16\"?>", "");
-            sb.Replace("\r\n", "");
-            sb.Replace(" ", "");
-            return sb.ToString();
-        }
-        public static string XmlSerializeFormat<T>(T obj,string rootnamespace)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.Append(rootnamespace);
-            sb.Append(XmlSerialize(obj));
-            sb.Replace("<?xml version=\"1.0\" encoding=\"utf-16\"?>", "");
-            sb.Replace("\r\n", "");
-            sb.Replace(" ", "");
-            return sb.ToString();
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                XmlSerializer xmlSerializer = new XmlSerializer(obj.GetType());
+                //序列化对象
+                XmlSerializerNamespaces namespaces = new XmlSerializerNamespaces();
+                namespaces.Add("", "");
+                XmlTextWriter xmlTextWriter = new XmlTextWriter(memoryStream, encoding);
+                xmlTextWriter.Formatting = System.Xml.Formatting.None;
+                xmlSerializer.Serialize(xmlTextWriter, obj, namespaces);
+                xmlTextWriter.Flush();
+                xmlTextWriter.Close();
+                string xml = encoding.GetString(memoryStream.ToArray());
+                return xml.Replace("<?xml version=\"1.0\" encoding=\"utf-8\"?>", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            }
         }
 
         #endregion
